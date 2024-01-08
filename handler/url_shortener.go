@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/aditya3232/url-shortener/constant"
@@ -67,7 +66,7 @@ func (h *URLShortener) Redirect(c *gin.Context) {
 	var input url_shortener.UrlShortenerInput
 
 	shortKey := c.Param("short_key")
-	input.ShortUrl = shortKey
+	input.ShortUrl = shortKey // input buat cari long_url where short_url, disini cuma param aja
 
 	urlShortener, err := h.urlShortenerService.FindByShortKey(input)
 	if err != nil {
@@ -83,28 +82,27 @@ func (h *URLShortener) Redirect(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(urlShortener.LongUrl)
+	urlShortener.Click = urlShortener.Click + 1
+	input = url_shortener.UrlShortenerInput{
+		ShortUrl: urlShortener.ShortUrl, // ini short_url real, dari database
+		Click:    urlShortener.Click,
+	}
 
-	// urlShortener.Click = urlShortener.Click + 1
-	// input = url_shortener.UrlShortenerInput{
-	// 	Click: urlShortener.Click,
-	// }
+	_, err = h.urlShortenerService.Update(input)
+	if err != nil {
+		endpoint := c.Request.URL.Path
+		message := constant.InvalidRequest
+		errorCode := http.StatusBadRequest
+		ipAddress := c.ClientIP()
+		errors := helper.FormatError(err)
+		log_function.Error(message, errors, endpoint, errorCode, ipAddress)
 
-	// _, err = h.urlShortenerService.Update(input)
-	// if err != nil {
-	// 	endpoint := c.Request.URL.Path
-	// 	message := constant.InvalidRequest
-	// 	errorCode := http.StatusBadRequest
-	// 	ipAddress := c.ClientIP()
-	// 	errors := helper.FormatError(err)
-	// 	log_function.Error(message, errors, endpoint, errorCode, ipAddress)
-
-	// 	response := helper.APIResponse(message, http.StatusBadRequest, nil)
-	// 	c.JSON(response.Meta.Code, response)
-	// 	return
-	// }
+		response := helper.APIResponse(message, http.StatusBadRequest, nil)
+		c.JSON(response.Meta.Code, response)
+		return
+	}
 
 	// redirect
-	// c.Redirect(http.StatusMovedPermanently, urlShortener.LongUrl)
-	c.Redirect(http.StatusMovedPermanently, "http://www.google.com/")
+	c.Redirect(http.StatusMovedPermanently, urlShortener.LongUrl)
+
 }
