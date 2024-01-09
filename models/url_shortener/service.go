@@ -6,12 +6,16 @@ import (
 	"time"
 
 	"github.com/aditya3232/url-shortener/config"
+	"github.com/aditya3232/url-shortener/helper"
 )
 
 type Service interface {
 	GenerateShortKey() string
-	Create(input UrlShortenerInput) (UrlShortener, error)
+	GetAll(map[string]string, helper.Pagination, helper.Sort) ([]UrlShortener, helper.Pagination, error)
+	GetOne(input UrlGetOneByIdInput) (UrlShortener, error)
 	Update(input UrlShortenerInput) (UrlShortener, error)
+	Delete(input UrlGetOneByIdInput) error
+	Create(input UrlShortenerInput) (UrlShortener, error)
 	FindByShortKey(input UrlShortenerInput) (UrlShortener, error)
 }
 
@@ -38,6 +42,28 @@ func (s *service) GenerateShortKey() string {
 	}
 
 	return string(shortKey)
+}
+
+func (s *service) GetAll(filter map[string]string, pagination helper.Pagination, sort helper.Sort) ([]UrlShortener, helper.Pagination, error) {
+	urlShorteners, pagination, err := s.urlShortenerRepository.GetAll(filter, pagination, sort)
+	if err != nil {
+		return nil, helper.Pagination{}, err
+	}
+
+	return urlShorteners, pagination, nil
+}
+
+func (s *service) GetOne(input UrlGetOneByIdInput) (UrlShortener, error) {
+	// var urlShortener UrlShortener
+	// urlShortener.ID = input.ID
+	urlShortenerID := UrlShortener{ID: input.ID}
+
+	urlShortener, err := s.urlShortenerRepository.GetOne(urlShortenerID)
+	if err != nil {
+		return urlShortener, err
+	}
+
+	return urlShortener, nil
 }
 
 func (s *service) Create(input UrlShortenerInput) (UrlShortener, error) {
@@ -73,10 +99,27 @@ func (s *service) Update(input UrlShortenerInput) (UrlShortener, error) {
 	return newUrlShortener, nil
 }
 
+func (s *service) Delete(input UrlGetOneByIdInput) error {
+	urlShortenerID := UrlShortener{ID: input.ID}
+
+	_, err := s.urlShortenerRepository.GetOne(urlShortenerID)
+	if err != nil {
+		return err
+	}
+
+	err = s.urlShortenerRepository.Delete(urlShortenerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *service) FindByShortKey(input UrlShortenerInput) (UrlShortener, error) {
 	fullUrlWithPrefix := config.CONFIG.URL_SHORT_PREFIX + input.ShortUrl
+	shortUrl := UrlShortener{ShortUrl: fullUrlWithPrefix}
 
-	newUrlShortener, err := s.urlShortenerRepository.FindByShortKey(fullUrlWithPrefix)
+	newUrlShortener, err := s.urlShortenerRepository.FindByShortKey(shortUrl)
 	if err != nil {
 		return newUrlShortener, err
 	}

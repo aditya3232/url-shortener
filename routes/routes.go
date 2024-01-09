@@ -28,4 +28,5 @@ func Initialize(router *gin.Engine) {
 func configureUrlShortenerRoutes(api *gin.RouterGroup, handler *handler.URLShortener) {
 	api.POST("/short", handler.CreateUrlShort)
 	api.GET("/short/:short_key", handler.Redirect)
+	api.GET("/short", handler.GetAll)
 }
